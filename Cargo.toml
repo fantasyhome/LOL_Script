@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 device_query = "2.1.0"
-enigo = "0.3.0"
+inputbot = "0.6.0"

@@ -1,15 +1,13 @@
 use device_query::{DeviceEvents, DeviceQuery, DeviceState, Keycode};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::thread::sleep;
-
-use enigo::{Button, Coordinate, Direction::Click, Enigo, Key, Keyboard, Mouse, Settings};
+use inputbot::MouseButton::LeftButton;
+use inputbot::{KeybdKey, MouseCursor};
 use std::sync::{Arc, Mutex};
 use std::thread;
+use std::time::Duration;
 
-static RUN: AtomicBool = AtomicBool::new(false); // Global RUN control
+static RUN: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false); // Global RUN control
 
 fn auto_attack(pos: Arc<Mutex<(i32, i32)>>) {
-    let mut enigo = Enigo::new(&Settings::default()).unwrap();
     let dir_vec = vec![
         (0, 3),
         (3, 3),
@@ -20,32 +18,25 @@ fn auto_attack(pos: Arc<Mutex<(i32, i32)>>) {
         (-3, 0),
         (-3, 3),
     ];
-    while RUN.load(Ordering::SeqCst) {
+
+    while RUN.load(std::sync::atomic::Ordering::SeqCst) {
         let current_pos = *pos.lock().unwrap(); // Lock to get position
-        enigo
-            .move_mouse(current_pos.0, current_pos.1, Coordinate::Abs)
-            .expect("failed to move mouse");
-        enigo
-            .button(Button::Left, Click)
-            .expect("TODO: panic message");
-        enigo
-            .key(Key::Unicode('a'), Click)
-            .expect("TODO: panic message");
-        sleep(std::time::Duration::from_secs(1));
+        MouseCursor::move_abs(current_pos.0, current_pos.1); // Move mouse
+        LeftButton.press(); // Simulate left click
+        LeftButton.release(); // Simulate left click
+        KeybdKey::AKey.press(); // Press 'A' key
+        thread::sleep(Duration::from_secs(1));
+
         for move_dir in dir_vec.iter() {
-            enigo
-                .move_mouse(move_dir.0, move_dir.1, Coordinate::Rel)
-                .expect("TODO: panic message");
-            enigo
-                .button(Button::Left, Click)
-                .expect("TODO: panic message");
-            enigo
-                .key(Key::Unicode('a'), Click)
-                .expect("TODO: panic message");
-            sleep(std::time::Duration::from_secs(1));
+            MouseCursor::move_rel(move_dir.0, move_dir.1); // Move mouse relative
+            LeftButton.press(); // Simulate left click
+            LeftButton.release(); // Simulate left click
+            KeybdKey::AKey.press(); // Press 'A' key
+            thread::sleep(Duration::from_secs(1));
         }
     }
 }
+
 
 fn main() {
     let device_state = DeviceState::new();
@@ -56,8 +47,8 @@ fn main() {
 
     let _guard = device_state.on_key_down(move |key| {
         if *key == Keycode::F12 {
-            RUN.store(!RUN.load(Ordering::SeqCst), Ordering::SeqCst); // Toggle RUN
-            if RUN.load(Ordering::SeqCst) {
+            RUN.store(!RUN.load(std::sync::atomic::Ordering::SeqCst), std::sync::atomic::Ordering::SeqCst); // Toggle RUN
+            if RUN.load(std::sync::atomic::Ordering::SeqCst) {
                 let pos_clone = Arc::clone(&pos);
                 thread::spawn(move || {
                     auto_attack(pos_clone);
